@@ -17,6 +17,7 @@ namespace NLRBScraper
     internal class Program
     {
         static string fromDate = DateTime.Today.Subtract(TimeSpan.FromDays(7)).ToString("yyyy-MM-dd");
+        static string toDate = DateTime.Today.ToString("yyyy-MM-dd");
         static string baseHref = "https://www.nlrb.gov";
         static string url = "https://www.nlrb.gov/advanced-search";
         static string cookieName = "nlrb-dl-sessid";
@@ -36,14 +37,16 @@ namespace NLRBScraper
             var token = CreateCookie();// Guid.NewGuid().ToString();
             context.SetCookie(new Url(baseHref), $"{cookieName}={token}");
 
+            Console.WriteLine("Creating browsing context...");
             var retInit = GetInitialBrowsingContext().Result;
             var valCookie = ReturnCookies();
 
+            Console.WriteLine($"Sending file request for {fromDate} to {toDate}");
             var dnld = Pass1BrowsingContext(retInit).Result;
 
             GetDownloadDetails().Wait();
             StartDownloads(dnld).Wait();
-            //get the filename to download
+            Console.WriteLine("Finished");
 
 
         }
@@ -86,7 +89,7 @@ namespace NLRBScraper
             query["foia_report_type"] = "cases_and_decisions";
             query["search_term"] = null;
             query["from_date"] = fromDate;// "2019-01-01";
-            query["to_date"] = DateTime.Today.ToString("yyyy-MM-dd");
+            query["to_date"] = toDate;// DateTime.Today.ToString("yyyy-MM-dd");
             query["case_status"] = "-1";
             query["case_type"] = "-1";
             query["sort-by"] = "date_filed";
@@ -142,8 +145,10 @@ namespace NLRBScraper
 
         static async Task GetDownloadDetails()
         {
+            Console.WriteLine("Getting download details...");
             try
             {
+               
                 var builder = new UriBuilder(new Uri(new Uri(baseHref), "/nlrb-downloads/load-user-downloads"));
                 var query = HttpUtility.ParseQueryString(builder.Query);
                 query["token"] = ReturnCookies()[cookieName];
@@ -162,6 +167,7 @@ namespace NLRBScraper
         }
         static async Task StartDownloads((string urlDnld, string cacheid, string typeofreport) dnldDetails)
         {
+            Console.WriteLine("Starting download process...");
             var download_token = ReturnCookies()[cookieName];
             //var url = new Uri(new Uri(baseHref), $"/nlrb-downloads/start-download/{dnldDetails.typeofreport}/{dnldDetails.cacheid}/{download_token}");
             var url = $"/nlrb-downloads/start-download/{dnldDetails.typeofreport}/{dnldDetails.cacheid}/{download_token}";
@@ -178,12 +184,10 @@ namespace NLRBScraper
             var dnld = await httpClient.GetFromJsonAsync<DownloadDetails>(new Uri(new Uri(baseHref), url));
 
             Console.WriteLine($"Processed: {dnld.data.processed}, Progress: {dnld.data.progress}");
-            //var urlProgress = new Uri(new Uri(baseHref), $"/nlrb-downloads/progress/{dnld.data.id}");
             var urlProgress = $"/nlrb-downloads/progress/{dnld.data.id}";
             while (dnld.data.finished!=1)
             {
                 dnld = await httpClient.GetFromJsonAsync<DownloadDetails>(urlProgress);
-               // var txt = await httpClient.GetStringAsync(urlProgress);
                 Console.WriteLine($"Processed: {dnld.data.processed}, Progress: {dnld.data.progress}");
                 Thread.Sleep(2000);
             }
@@ -199,7 +203,6 @@ namespace NLRBScraper
             using var fs = new FileStream(filePath, FileMode.Create);
             await stream.CopyToAsync(fs);
             Console.WriteLine($"Downloaded file to {filePath}");
-            //var document = await context.OpenAsync(url.AbsoluteUri). .WaitUntilAvailable();
         }
         
     }
