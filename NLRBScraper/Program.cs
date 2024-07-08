@@ -48,7 +48,10 @@ namespace NLRBScraper
             StartDownloads(dnld).Wait();
             Console.WriteLine("Finished");
             Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
+            if (!Console.IsInputRedirected && Console.KeyAvailable)
+            {
+                Console.ReadKey();
+            }
 
 
         }
