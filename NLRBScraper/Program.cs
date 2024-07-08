@@ -21,20 +21,13 @@ namespace NLRBScraper
         static string baseHref = "https://www.nlrb.gov";
         static string url = "https://www.nlrb.gov/advanced-search";
         static string cookieName = "nlrb-dl-sessid";
-        //static CookieContainer cookieContainer = new CookieContainer();
         static IConfiguration configuration;
         static IBrowsingContext context;
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            //using var handler = new HttpClientHandler() { CookieContainer = cookieContainer };
-            //using var httpClient = new HttpClient(handler);
-            //var retInit = GetInitial(httpClient).Result;
-            //Pass2(httpClient, retInit).Wait();
-            //Console.WriteLine("Hello, World!");
             configuration = Configuration.Default.WithDefaultLoader().WithDefaultCookies().WithJs();
             context = BrowsingContext.New(configuration);
 
-            //var token = CreateCookie();// Guid.NewGuid().ToString();
             var token = CookieGenerator.CreateCookie();
             context.SetCookie(new Url(baseHref), $"{cookieName}={token}");
 
@@ -45,8 +38,8 @@ namespace NLRBScraper
             Console.WriteLine($"Sending file request for {fromDate} to {toDate}");
             var dnld = Pass1BrowsingContext(retInit).Result;
 
-            GetDownloadDetails().Wait();
-            StartDownloads(dnld).Wait();
+            await GetDownloadDetails(); //.Wait();
+            await StartDownloads(dnld); //.Wait();
             Console.WriteLine("Finished");
             Console.WriteLine("Press any key to exit...");
             if (!Console.IsInputRedirected && Console.KeyAvailable)
@@ -56,18 +49,7 @@ namespace NLRBScraper
 
 
         }
-        //static string CreateCookie()
-        //{
-        //    string token = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx";
-        //    token = Regex.Replace(token, "[xy]", (match) =>
-        //    {
-        //        int r = new Random().Next(16);
-        //        int v = match.Value == "x" ? r : (r & 0x3 | 0x8);
-        //        return v.ToString("x");
-        //    });
-        //    return token;
-        //}
-        static Dictionary<string,string> ReturnCookies() => context.GetCookie(new Url(baseHref)).Split(';').Select(x => x.Trim().Split('=')).ToDictionary(x => x[0], x => x[1]);
+        Dictionary<string,string> ReturnCookies() => context.GetCookie(new Url(baseHref)).Split(';').Select(x => x.Trim().Split('=')).ToDictionary(x => x[0], x => x[1]);
         static async Task<(string formBuildId, string formId)> GetInitialBrowsingContext() {
             (string formBuildId, string formId) elForms = new();
             var document = await context.OpenAsync(url);
